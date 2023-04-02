@@ -11,91 +11,132 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
 int comprimi(FILE *fin, FILE *fout);
 int decomprimi(FILE *fin, FILE *fout);
 
 
 void main(){
-    FILE *fileIn = fopen("/home/alberto/Scrivania/s307025_1/L02/E03/sorgente.txt","r");
-    FILE *fileOut = fopen("/home/alberto/Scrivania/s307025_1/L02/E03/sorgenteCompressa.txt","r");
+    FILE *fileIn;
+    FILE *fileOut;
+    char nomeFile[35];
 
-    if(fileIn == NULL || fileOut == NULL){
-        printf("errore nell'apertura dei file");
-        return;
+    printf("Inserire C per comprimere e D per decomprimere\n->");
+    fflush(stdin);
+    switch(getchar()){
+        case 'C':
+            printf("inserire nome file da comprimere:\n->");
+            scanf("%s", nomeFile);
+            fileIn = fopen(nomeFile,"r");
+            //fileIn = fopen("C:\\Users\\alb20\\OneDrive\\Desktop\\poli\\s307025_1\\L02\\E03\\sorgente.txt", "r");
+            fileOut = fopen("./sorgenteCompressa.txt","w");
+            if(fileIn == NULL || fileOut == NULL){
+                printf("errore nell'apertura dei file");
+                exit(-1);
+            }
+            printf("Sono stati stampati %d caratteri durante la compressione",comprimi(fileIn,fileOut));
+        break;
+
+        case 'D':
+            printf("inserire nome file da decomprimere:\n->");
+            scanf("%s", nomeFile);
+            fileIn = fopen(nomeFile,"r");
+            //fileIn = fopen("C:\\Users\\alb20\\OneDrive\\Desktop\\poli\\s307025_1\\L02\\E03\\sorgenteCompressa.txt", "r");
+            fileOut = fopen("./compressoDecompresso.txt","w");
+            if(fileIn == NULL || fileOut == NULL){
+                printf("errore nell'apertura dei file");
+                exit(-1);
+            }
+            printf("Sono stati stampati %d caratteri durante la decompressione",decomprimi(fileIn,fileOut));
+            break;
+            
+        default:
+            printf("scelta non valida");
     }
-    //printf("Sono stati scritti %d caratteri nel file compresso e %d in quello decompresso", comprimi(fileIn, fileOut), decomprimi(fileOut,fileIn));
-    comprimi(fileIn,fileIn);
-    printf("\n\n");
-    decomprimi(fileOut, fileOut);
+
     fclose(fileIn);
     fclose(fileOut);
+    return;
 }
 
 
 int comprimi(FILE *fin, FILE *fout){
     char attuale, precedente;
-    int ricorrenza = 1, cntCaratteri = 0;
+    int ricorrenza = 0, cntCaratteri = 0;
 
     fscanf(fin, "%c", &precedente);
     while( fscanf(fin, "%c", &attuale) != EOF ){
-        
         // chiede se il carattere letto è uguale al precedente
         if( attuale == precedente ){
             // chiede se ha già letto 9 caratteri uguali
             if( ricorrenza == 9 ){
                 cntCaratteri += 3;
-                printf("%c$9",attuale);
-                ricorrenza = 1;
+                fprintf(fout, "%c$9",attuale);
+                ricorrenza = 0;
             }else{
                 ricorrenza ++;
             }
         }else{
             //il carattere è diverso
-            printf("%c", precedente);
+            fprintf(fout, "%c", precedente);
             cntCaratteri++;
-            if(ricorrenza > 1){
-                cntCaratteri += 2;
-                printf("$%d",ricorrenza);
-                ricorrenza = 1;
+            
+            if( ricorrenza > 0){
+                //se ci sono solo due caratteri simili vicini stampa i due caratteri, sennò usa la notazione $
+                if( ricorrenza == 1){
+                    fprintf(fout, "%c", precedente);
+                    cntCaratteri++;
+                    ricorrenza = 0;                
+                }else{
+                    cntCaratteri += 2;
+                    fprintf(fout, "$%d",ricorrenza);
+                    ricorrenza = 0;
+                }
             }
             precedente = attuale;
         }
     }
 
     // finito di leggere il file deve ancora stampare i caratteri letti precedentemente 
-    printf("%c", precedente);
+    fprintf(fout, "%c", precedente);
     cntCaratteri++;
-    if(ricorrenza > 1){
-        cntCaratteri += 2;
-        printf("$%d",ricorrenza);
-        ricorrenza = 1;
-    }
 
+    if( ricorrenza == 1 ){
+        fprintf(fout, "%c", precedente);
+        cntCaratteri++;
+    }else{
+        if( ricorrenza > 1 ){
+            cntCaratteri += 2;
+            fprintf(fout, "$%d",ricorrenza);
+        }
+    }
+    
     return cntCaratteri;
 }
-
 
 
 int decomprimi(FILE *fin, FILE *fout){
     int cntCaratteri = 0;
     char attuale, precedente, ricorrenza;
-
+    // legge ad uno ad uno i caratteri fino a fine file
     while( fscanf(fin,"%c",&attuale) != EOF ){
-        
+        // quando legge il dollaro stampa n volte il carattere precedente (pensando n il carattere dopo il dollaro )
         if( attuale == '$' ){
+            // non posso usare un %d perchè se dopo ci fosse un intero leggerebbe le due/tre/... cifre.
+            // Quindi leggo il carattere ascii successivo ad $ e gli sottraggo il corrispettivo valore ascci di '1'. 
             fscanf(fin,"%c",&ricorrenza);
             ricorrenza = ricorrenza - '1';
             cntCaratteri+= ricorrenza;
-            for ( int i = 0; i < ricorrenza; i++ ){
-                printf("%c", precedente);
+            //stampo 'ricorrenza' volte il carattere precedente il dollaro
+            for ( int i = 0; i <= ricorrenza; i++ ){
+                fprintf(fout, "%c", precedente);
             }
         }else{
-
+            // se non ha letto $ stampa semplicemente il carattere precedentemente letto
             cntCaratteri++;
-            printf("%c", attuale);
+            fprintf(fout, "%c", attuale);
         }
         precedente = attuale;
     }
-    
     return cntCaratteri;
 }
